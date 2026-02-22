@@ -98,7 +98,7 @@
                             <li><span class="check">✔</span> 60 DAYS GUARANTEE</li>
                         </ul>
                         <div class="product-total">
-                            Total: <s>$588</s> <strong>$294</strong>
+                            Total: <s>$588</s> <strong>$294</strong><br>
                             <span class="free-shipping">+ FREE SHIPPING</span>
                         </div>
                         <a href="https://enduroxprime.mycartpanda.com/checkout/204834758:1?afid=95ia00dgsm"
@@ -127,7 +127,7 @@
                             <li><span class="check">✔</span> 60 DAYS GUARANTEE</li>
                         </ul>
                         <div class="product-total">
-                            Total: <s>$537</s> <strong>$217</strong>
+                            Total: <s>$537</s> <strong>$217</strong><br>
                             <span class="free-shipping">+ FREE SHIPPING</span>
                         </div>
                         <a href="https://enduroxprime.mycartpanda.com/checkout/204834757:1?afid=95ia00dgsm"
@@ -156,8 +156,8 @@
                             <li><span class="check">✔</span> 60 DAYS GUARANTEE</li>
                         </ul>
                         <div class="product-total">
-                            Total: <s>$377</s> <strong>$177</strong>
-                            <span class="free-shipping">+ $9.99 SHIPPING</span>
+                            Total: <s>$377</s> <strong>$177</strong><br>
+                            <span class="shipping">+$9.99 SHIPPING</span>
                         </div>
                         <a href="https://enduroxprime.mycartpanda.com/checkout/204834756:1?afid=95ia00dgsm"
                             class="btn-buy">BUY NOW</a>
@@ -313,31 +313,32 @@
 
     <!-- ===== TRACKING ===== -->
 
-    <!-- RTK Tracking -->
+    <!-- RTK: store clickid in rtkclickid-store cookie (required for VTurb play/pitch postbacks) -->
     <script>
-        var rtkcmpid = '693ad2e6ea096666615e6164';
-        (function (d, t) {
-            var g = d.createElement(t), s = d.getElementsByTagName(t)[0];
-            g.src = "https://www.googletagmanager.com/gtag/js?id=" + rtkcmpid; g.defer = true; g.async = true;
-            s.parentNode.insertBefore(g, s);
-            g.onload = function () {
-                window.dataLayer = window.dataLayer || [];
-                function gtag() { dataLayer.push(arguments); }
-                gtag('js', new Date()); gtag('config', rtkcmpid);
-            };
-        })(document, 'script');
+        (function () {
+            var params = new URLSearchParams(window.location.search);
+            var clickid = params.get('clickid');
+            if (clickid) {
+                document.cookie = 'rtkclickid-store=' + encodeURIComponent(clickid) + '; path=/; max-age=2592000; SameSite=Lax';
+                console.log('rtkclickid-store cookie set:', clickid);
+            }
+        })();
     </script>
 
     <!-- Clickid postback pixel -->
     <script>
-        (function () {
-            var url = new URL(window.location.href);
-            var clickId = url.searchParams.get('click_id');
+        (() => {
+            const params = new URLSearchParams(window.location.search);
+            const clickId = params.get('clickid')
+                || (document.cookie.match('(?:^|; )rtkclickid-store=([^;]*)') || [])[1];
+
             if (clickId) {
-                var img = document.createElement('img');
-                img.src = 'https://www.getredtrk.com/click.php?lp=1&clickid=' + encodeURIComponent(clickId) + '&sum=0';
-                img.width = 1; img.height = 1; img.style.display = 'none';
+                const img = new Image(1, 1);
+                img.src = `https://skgp6.ttrk.io/postback?format=img&clickid=${encodeURIComponent(clickId)}&sum=0&type=pageview`;
                 document.body.appendChild(img);
+                console.log('pageview pixel fired with clickid:', clickId);
+            } else {
+                console.warn('clickid não encontrado na URL nem no cookie.');
             }
         })();
     </script>
@@ -345,20 +346,47 @@
     <!-- Clickid propagation -->
     <script>
         (function () {
-            try {
-                var url = new URL(window.location.href);
-                var clickId = url.searchParams.get('click_id') || url.searchParams.get('sck');
-                if (clickId) {
-                    document.querySelectorAll('a[href]').forEach(function (a) {
-                        try {
-                            var u = new URL(a.href);
-                            u.searchParams.set('click_id', clickId);
-                            u.searchParams.set('sck', clickId);
-                            a.href = u.toString();
-                        } catch (e) { }
-                    });
-                }
-            } catch (e) { }
+            var urlParams = new URLSearchParams(window.location.search);
+            var clickid = urlParams.get('clickid');
+            if (!clickid) return;
+
+            window.addEventListener('DOMContentLoaded', function () {
+                var elements = document.querySelectorAll('a, button');
+                elements.forEach(function (el) {
+                    var isLink = el.tagName.toLowerCase() === 'a';
+                    var attrName = isLink ? 'href' : 'data-href';
+                    var currentHref = el.getAttribute(attrName);
+
+                    if (
+                        !currentHref ||
+                        currentHref.indexOf('clickid=') !== -1 ||
+                        currentHref.indexOf('cid=') !== -1 ||
+                        currentHref.indexOf('click_id=') !== -1 ||
+                        currentHref.indexOf('campaignkey=') !== -1
+                    ) {
+                        return;
+                    }
+
+                    var hasQuery = currentHref.indexOf('?') !== -1;
+                    var anchorIndex = currentHref.indexOf('#');
+                    var anchor = '';
+
+                    if (anchorIndex !== -1) {
+                        anchor = currentHref.substring(anchorIndex);
+                        currentHref = currentHref.substring(0, anchorIndex);
+                    }
+
+                    var newHref = currentHref
+                        + (hasQuery ? '&' : '?')
+                        + 'clickid=' + clickid
+                        + '&cid=' + clickid
+                        + '&click_id=' + clickid
+                        + '&campaignkey=' + clickid
+                        + anchor;
+
+                    el.setAttribute(attrName, newHref);
+                });
+            });
         })();
     </script>
 
